@@ -1,5 +1,6 @@
 import json
 import uuid
+import os
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Iterator, List, Generator, Any
 import struct
@@ -14,6 +15,12 @@ class StreamTracker:
             if item:
                 self.has_content = True
             yield item
+
+def _get_proxies() -> Optional[Dict[str, str]]:
+    proxy = os.getenv("HTTP_PROXY", "").strip()
+    if proxy:
+        return {"http": proxy, "https": proxy}
+    return None
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATE_PATH = BASE_DIR / "templates" / "streaming_request.json"
@@ -198,7 +205,8 @@ def send_chat_request(access_token: str, messages: List[Dict[str, Any]], model: 
     payload_str = json.dumps(body_json, ensure_ascii=False)
     headers = _merge_headers(headers_from_log, access_token)
     session = requests.Session()
-    resp = session.post(url, headers=headers, data=payload_str, stream=True, timeout=timeout)
+    proxies = _get_proxies()
+    resp = session.post(url, headers=headers, data=payload_str, stream=True, timeout=timeout, proxies=proxies)
     if resp.status_code >= 400:
         try:
             err = resp.text

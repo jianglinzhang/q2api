@@ -193,6 +193,12 @@ class ChatCompletionRequest(BaseModel):
 OIDC_BASE = "https://oidc.us-east-1.amazonaws.com"
 TOKEN_URL = f"{OIDC_BASE}/token"
 
+def _get_proxies() -> Optional[Dict[str, str]]:
+    proxy = os.getenv("HTTP_PROXY", "").strip()
+    if proxy:
+        return {"http": proxy, "https": proxy}
+    return None
+
 def _oidc_headers() -> Dict[str, str]:
     return {
         "content-type": "application/json",
@@ -220,7 +226,7 @@ def refresh_access_token_in_db(account_id: str) -> Dict[str, Any]:
         }
 
         try:
-            r = requests.post(TOKEN_URL, headers=_oidc_headers(), json=payload, timeout=(15, 60))
+            r = requests.post(TOKEN_URL, headers=_oidc_headers(), json=payload, timeout=(15, 60), proxies=_get_proxies())
             r.raise_for_status()
             data = r.json()
             new_access = data.get("accessToken")

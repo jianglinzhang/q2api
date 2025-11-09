@@ -1,9 +1,16 @@
 import json
 import time
 import uuid
+import os
 from typing import Dict, Tuple, Optional
 
 import requests
+
+def _get_proxies() -> Optional[Dict[str, str]]:
+    proxy = os.getenv("HTTP_PROXY", "").strip()
+    if proxy:
+        return {"http": proxy, "https": proxy}
+    return None
 
 # OIDC endpoints and constants (aligned with v1/auth_client.py)
 OIDC_BASE = "https://oidc.us-east-1.amazonaws.com"
@@ -31,7 +38,7 @@ def post_json(url: str, payload: Dict) -> requests.Response:
     # Keep JSON order and mimic body closely to v1
     payload_str = json.dumps(payload, ensure_ascii=False)
     headers = make_headers()
-    resp = requests.post(url, headers=headers, data=payload_str, timeout=(15, 60))
+    resp = requests.post(url, headers=headers, data=payload_str, timeout=(15, 60), proxies=_get_proxies())
     return resp
 
 
