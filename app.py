@@ -18,6 +18,19 @@ import httpx
 import aiosqlite
 
 from contextlib import asynccontextmanager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 应用启动时执行的代码 (相当于 startup_event)
+    """Initialize database and start background tasks on startup."""
+    await _init_global_client()
+    await _ensure_db()
+    asyncio.create_task(_refresh_stale_tokens())
+    
+    yield  # <--- 这是关键，代码会在这里暂停，直到应用关闭
+    
+    # 应用关闭时执行的代码 (相当于 shutdown_event)
+    print("应用关闭，开始释放资源...")
+    await _close_global_client()
 
 # ------------------------------------------------------------------------------
 # Bootstrap
@@ -1067,19 +1080,7 @@ async def health():
 # Startup / Shutdown Events
 # ------------------------------------------------------------------------------
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # 应用启动时执行的代码 (相当于 startup_event)
-    """Initialize database and start background tasks on startup."""
-    await _init_global_client()
-    await _ensure_db()
-    asyncio.create_task(_refresh_stale_tokens())
-    
-    yield  # <--- 这是关键，代码会在这里暂停，直到应用关闭
-    
-    # 应用关闭时执行的代码 (相当于 shutdown_event)
-    print("应用关闭，开始释放资源...")
-    await _close_global_client()
+
 
 # @app.on_event("startup")
 # async def startup_event():
