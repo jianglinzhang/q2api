@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
     await _close_global_client()
     print("--- 应用关闭完成。 ---")
 
-app = FastAPI(title="v2 OpenAI-compatible Server (Amazon Q Backend)",lifespan=mylifespan)
+app = FastAPI(title="v2 OpenAI-compatible Server (Amazon Q Backend)",lifespan=lifespan)
 
 # CORS for simple testing in browser
 app.add_middleware(
