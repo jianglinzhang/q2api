@@ -17,20 +17,8 @@ from dotenv import load_dotenv
 import httpx
 import aiosqlite
 
-# from contextlib import asynccontextmanager
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     # 应用启动时执行的代码 (相当于 startup_event)
-#     """Initialize database and start background tasks on startup."""
-#     await _init_global_client()
-#     await _ensure_db()
-#     asyncio.create_task(_refresh_stale_tokens())
-    
-#     yield  # <--- 这是关键，代码会在这里暂停，直到应用关闭
-    
-#     # 应用关闭时执行的代码 (相当于 shutdown_event)
-#     print("应用关闭，开始释放资源...")
-#     await _close_global_client()
+from contextlib import asynccontextmanager
+
 
 # ------------------------------------------------------------------------------
 # Bootstrap
@@ -41,7 +29,28 @@ DB_PATH = BASE_DIR / "data.sqlite3"
 
 load_dotenv(BASE_DIR / ".env")
 
-app = FastAPI(title="v2 OpenAI-compatible Server (Amazon Q Backend)",lifespan=lifespan)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    新的 Lifespan 事件处理器。
+    - yield 之前的部分会在应用启动时执行。
+    - yield 之后的部分会在应用关闭时执行。
+    """
+    # Startup
+    print("--- 正在启动应用，初始化全局客户端和数据库... ---")
+    await _init_global_client()
+    await _ensure_db()
+    asyncio.create_task(_refresh_stale_tokens())
+    print("--- 应用启动完成。 ---")
+
+    yield  # 应用在这里运行
+
+    # Shutdown
+    print("--- 正在关闭应用，关闭全局客户端... ---")
+    await _close_global_client()
+    print("--- 应用关闭完成。 ---")
+
+app = FastAPI(title="v2 OpenAI-compatible Server (Amazon Q Backend)",lifespan=mylifespan)
 
 # CORS for simple testing in browser
 app.add_middleware(
@@ -1082,13 +1091,13 @@ async def health():
 
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database and start background tasks on startup."""
-    await _init_global_client()
-    await _ensure_db()
-    asyncio.create_task(_refresh_stale_tokens())
+# @app.on_event("startup")
+# async def startup_event():
+#     """Initialize database and start background tasks on startup."""
+#     await _init_global_client()
+#     await _ensure_db()
+#     asyncio.create_task(_refresh_stale_tokens())
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    await _close_global_client()
+# @app.on_event("shutdown")
+# async def shutdown_event():
+#     await _close_global_client()
